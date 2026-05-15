@@ -3,21 +3,17 @@ const cors = require("cors");
 
 const app = express();
 
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type"]
-}));
-
+app.use(cors());
+app.options("*", cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.json({ status: "Get AdCraft AI server is running" });
+  res.json({ status: "running" });
 });
 
 app.post("/generate", async (req, res) => {
   const { prompt } = req.body;
-  if (!prompt) return res.status(400).json({ error: "No prompt provided" });
+  if (!prompt) return res.status(400).json({ error: "No prompt" });
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -29,18 +25,26 @@ app.post("/generate", async (req, res) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
+        max_tokens: 1500,
         messages: [{ role: "user", content: prompt }]
       })
     });
 
     const data = await response.json();
-    if (data.error) return res.status(500).json({ error: data.error.message });
+    console.log("Anthropic response status:", response.status);
+
+    if (!response.ok) {
+      console.error("Anthropic error:", data);
+      return res.status(500).json({ error: data?.error?.message || "API error" });
+    }
+
     const text = (data.content || []).map(b => b.text || "").join("");
+    console.log("Response text length:", text.length);
     res.json({ result: text });
+
   } catch (err) {
-    console.error("Error:", err);
-    res.status(500).json({ error: "Something went wrong" });
+    console.error("Server error:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
