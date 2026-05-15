@@ -2,8 +2,18 @@ const express = require("express");
 const cors = require("cors");
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"]
+}));
+
 app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.json({ status: "Get AdCraft AI server is running" });
+});
 
 app.post("/generate", async (req, res) => {
   const { prompt } = req.body;
@@ -25,9 +35,11 @@ app.post("/generate", async (req, res) => {
     });
 
     const data = await response.json();
+    if (data.error) return res.status(500).json({ error: data.error.message });
     const text = (data.content || []).map(b => b.text || "").join("");
     res.json({ result: text });
   } catch (err) {
+    console.error("Error:", err);
     res.status(500).json({ error: "Something went wrong" });
   }
 });
